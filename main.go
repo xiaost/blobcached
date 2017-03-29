@@ -49,7 +49,8 @@ func main() {
 	flag.Parse()
 
 	if printVersion {
-		fmt.Println("Blobcached %s", VERSION)
+		fmt.Println("Blobcached", VERSION)
+		return
 	}
 
 	l, err := net.Listen("tcp", bindAddr)
