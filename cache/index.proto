@@ -1,0 +1,21 @@
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+package cache;
+
+option (gogoproto.goproto_getters_all) = false;
+
+message IndexMeta {
+    required int64 Term = 1 [(gogoproto.nullable) = false];
+    required int64 Head = 2 [(gogoproto.nullable) = false];
+    required int64 DataSize = 3 [(gogoproto.nullable) = false];
+}
+
+
+message IndexItem {
+    required int64 Term = 1 [(gogoproto.nullable) = false];
+    required int64 Offset = 2 [(gogoproto.nullable) = false];
+    required int32 ValueSize = 3 [(gogoproto.nullable) = false];
+    required int64 Timestamp = 4 [(gogoproto.nullable) = false];
+    required uint32 TTL = 5 [(gogoproto.nullable) = false];
+    required uint32 Flags = 6 [(gogoproto.nullable) = false];
+}
