@@ -10,7 +10,7 @@ import (
 	"github.com/xiaost/blobcached/server"
 )
 
-const VERSION = "0.1.0"
+const VERSION = "0.1.1-dev"
 
 func main() {
 	var (

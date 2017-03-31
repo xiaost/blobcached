@@ -1,8 +1,6 @@
 package memcache
 
 var (
-	MaxCommandInfoBytes = 512
-
 	RspErr       = []byte("ERROR\r\n")
 	RspStored    = []byte("STORED\r\n")
 	RspNotStored = []byte("NOT_STORED\r\n")
