@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -24,7 +25,7 @@ func TestShardSetGet(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
-	s, err := LoadCacheShard(dir, &ShardOptions{Size: 1024, TTL: 1})
+	s, err := LoadCacheShard(filepath.Join(dir, "shard"), &ShardOptions{Size: 1024, TTL: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
