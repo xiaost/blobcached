@@ -11,6 +11,7 @@ import (
 var (
 	ErrNotFound  = errors.New("key not found")
 	ErrValueSize = errors.New("value size exceeded")
+	ErrValueCrc  = errors.New("value checksum err")
 )
 
 const (

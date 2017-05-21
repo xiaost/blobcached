@@ -22,7 +22,7 @@ func TestAllocatorPool(t *testing.T) {
 
 	metrics := allocator.(*AllocatorPool).GetMetrics()
 	if metrics.Malloc != 1002 || metrics.Free != 1002 || metrics.New != 3 {
-		t.Fatal("metrics err", metrics)
+		t.Fatalf("metrics err %+v", metrics)
 	}
 
 	allocator.Malloc(int(MaxValueSize + 1))

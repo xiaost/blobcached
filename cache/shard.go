@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"hash/crc32"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -122,6 +123,7 @@ func (s *Shard) Set(ci Item) error {
 	}
 	ii.TTL = ci.TTL
 	ii.Flags = ci.Flags
+	ii.Crc32 = crc32.ChecksumIEEE(ci.Value)
 	if err := s.data.Write(ii.Offset, ci.Value); err != nil {
 		return errors.Wrap(err, "write data")
 	}
@@ -170,9 +172,12 @@ func (s *Shard) Get(key string) (Item, error) {
 		if err == ErrNotFound {
 			atomic.AddInt64(&s.metrics.GetMisses, 1)
 		}
-		s.options.Allocator.Free(ci.Value)
-		ci.Value = nil
+		ci.Free()
 		return ci, err
+	}
+	if ii.Crc32 != 0 && ii.Crc32 != crc32.ChecksumIEEE(ci.Value) {
+		ci.Free()
+		return ci, ErrValueCrc
 	}
 	atomic.AddInt64(&s.metrics.GetHits, 1)
 	return ci, nil

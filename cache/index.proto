@@ -18,4 +18,5 @@ message IndexItem {
     required int64 Timestamp = 4 [(gogoproto.nullable) = false];
     required uint32 TTL = 5 [(gogoproto.nullable) = false];
     required uint32 Flags = 6 [(gogoproto.nullable) = false];
+    optional uint32 Crc32 = 7 [(gogoproto.nullable) = false];
 }
