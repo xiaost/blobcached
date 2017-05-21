@@ -4,10 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
-	"hash"
-	"hash/fnv"
 	"sort"
-	"sync"
 )
 
 const (
@@ -30,16 +27,18 @@ type ConsistentHash struct {
 	nodes consistentNodes
 }
 
-var hashPool = sync.Pool{New: func() interface{} {
-	return fnv.New64a()
-}}
-
+// from https://golang.org/src/hash/fnv/fnv.go
+// Equals to:
+// h := fnv.New64a()
+// h.Write(b)
+// h.Sum64
 func dohash(b []byte) uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
-	h.Write(b)
-	return h.Sum64()
+	hash := uint64(14695981039346656037)
+	for _, c := range b {
+		hash ^= uint64(c)
+		hash *= 1099511628211
+	}
+	return hash
 }
 
 // NewConsistentHashTable creates a ConsistentHash with value[0, n)
