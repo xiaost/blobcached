@@ -82,7 +82,7 @@ type CacheOptions struct {
 }
 
 var DefualtCacheOptions = CacheOptions{
-	ShardNum:  16,
+	ShardNum:  7,
 	Size:      32 * MaxValueSize, // 32*128MB = 4GB
 	TTL:       0,
 	Allocator: NewAllocatorPool(),
