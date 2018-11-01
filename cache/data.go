@@ -73,8 +73,8 @@ func (d *CacheData) Size() int64 {
 }
 
 func (d *CacheData) Read(offset int64, b []byte) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 	if int(offset) >= len(d.data) {
 		return ErrOutOfRange
 	}
@@ -95,8 +95,8 @@ func (d *CacheData) Read(offset int64, b []byte) error {
 }
 
 func (d *CacheData) Write(offset int64, b []byte) error {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	sz := int64(len(b))
 	voffset := offset + datahdrsize
 	if int(voffset+sz) > len(d.data) {
