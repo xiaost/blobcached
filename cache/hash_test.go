@@ -41,10 +41,3 @@ func TestConsistentHash(t *testing.T) {
 		t.Fatal("match rate err", matchRate, "expect", expectRate)
 	}
 }
-
-func BenchmarkDoHash(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		s := strconv.FormatInt(rand.Int63(), 36) + strconv.FormatInt(rand.Int63(), 36)
-		dohash([]byte(s))
-	}
-}

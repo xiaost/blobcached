@@ -90,12 +90,12 @@ func (i *CacheIndex) Reserve(size int32) (*IndexItem, error) {
 	if int64(size) > meta.DataSize {
 		return nil, errors.New("not enough space")
 	}
-	if meta.Head+datahdrsize+int64(size) > meta.DataSize {
+	if meta.Head+int64(size) > meta.DataSize {
 		meta.Head = 0
 		meta.Term += 1
 	}
 	idx := &IndexItem{Term: meta.Term, Offset: meta.Head, ValueSize: size, Timestamp: time.Now().Unix()}
-	meta.Head += datahdrsize + int64(size)
+	meta.Head += int64(size)
 
 	err := i.db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(indexMetaBucket)
@@ -224,5 +224,5 @@ func (m IndexMeta) IsValidate(i IndexItem) bool {
 
 // TotalSize returns bytes used including index & data of the item
 func (i IndexItem) TotalSize() int64 {
-	return int64(i.Size()) + datahdrsize + int64(i.ValueSize)
+	return int64(i.Size()) + int64(i.ValueSize)
 }

@@ -5,12 +5,6 @@ import (
 	"sync/atomic"
 )
 
-var bytessize = []int{
-	4 << 10, 8 << 10, 16 << 10, 32 << 10, 64 << 10, 128 << 10, 256 << 10, 512 << 10,
-	1 << 20, 2 << 20, 4 << 20, 8 << 20, 16 << 20, 32 << 20, 64 << 20,
-	int(MaxValueSize),
-}
-
 type AllocatorPoolMetrics struct {
 	Malloc int64
 	Free   int64
@@ -21,46 +15,39 @@ type AllocatorPoolMetrics struct {
 }
 
 type AllocatorPool struct {
-	pools   []*sync.Pool
+	pool    sync.Pool
 	metrics AllocatorPoolMetrics
 }
 
-func NewAllocatorPool() Allocator {
-	var p AllocatorPool
-	makeBytesPool := func(n int) *sync.Pool {
-		return &sync.Pool{New: func() interface{} {
-			atomic.AddInt64(&p.metrics.New, 1)
-			return make([]byte, n, n)
-		}}
-	}
-	p.pools = make([]*sync.Pool, len(bytessize))
-	for i, n := range bytessize {
-		p.pools[i] = makeBytesPool(n)
+func NewAllocatorPool(bufsize int) Allocator {
+	p := AllocatorPool{}
+	p.pool.New = func() interface{} {
+		atomic.AddInt64(&p.metrics.New, 1)
+		return &Item{Value: make([]byte, 0, bufsize)}
 	}
 	return &p
 }
 
-func (p *AllocatorPool) Malloc(n int) []byte {
+func (p *AllocatorPool) Alloc(n int) *Item {
 	atomic.AddInt64(&p.metrics.Malloc, 1)
-	for i, v := range bytessize {
-		if v >= n {
-			b := p.pools[i].Get().([]byte)
-			return b[:n]
-		}
+	item := p.pool.Get().(*Item)
+	if cap(item.Value) < n {
+		p.pool.Put(item)
+		atomic.AddInt64(&p.metrics.New, 1)
+		item = &Item{Value: make([]byte, 0, n)}
 	}
-	atomic.AddInt64(&p.metrics.ErrMalloc, 1)
-	return make([]byte, n, n)
+	item.free = p.Free
+	item.Key = ""
+	item.Value = item.Value[:n]
+	item.Timestamp = 0
+	item.TTL = 0
+	item.Flags = 0
+	return item
 }
 
-func (p *AllocatorPool) Free(b []byte) {
+func (p *AllocatorPool) Free(i *Item) {
 	atomic.AddInt64(&p.metrics.Free, 1)
-	for i, n := range bytessize {
-		if n == cap(b) {
-			p.pools[i].Put(b)
-			return
-		}
-	}
-	atomic.AddInt64(&p.metrics.ErrFree, 1)
+	p.pool.Put(i)
 }
 
 func (p *AllocatorPool) GetMetrics() AllocatorPoolMetrics {

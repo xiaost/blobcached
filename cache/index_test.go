@@ -26,7 +26,7 @@ func TestCacheIndexReserve(t *testing.T) {
 		t.Fatal("item err", item)
 	}
 	item1, err := c.Reserve(400)
-	if item1.Offset != item.Offset+400+datahdrsize {
+	if item1.Offset != item.Offset+400 {
 		t.Fatal("item err", item1)
 	}
 	item2, err := c.Reserve(400)
@@ -34,7 +34,7 @@ func TestCacheIndexReserve(t *testing.T) {
 		t.Fatal("item err", item2)
 	}
 	meta := c.GetIndexMeta()
-	if meta.Term != 1 || meta.Head != 400+datahdrsize {
+	if meta.Term != 1 || meta.Head != 400 {
 		t.Fatal("meta err", meta)
 	}
 	if err := c.Close(); err != nil {

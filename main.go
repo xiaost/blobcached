@@ -19,6 +19,7 @@ func main() {
 		cacheSize   int64
 		cacheShards int64
 		cacheTTL    int64
+		bufsize     int
 
 		printVersion bool
 	)
@@ -42,6 +43,10 @@ func main() {
 	flag.Int64Var(&cacheTTL,
 		"ttl", 0,
 		"the global ttl of cache items.")
+
+	flag.IntVar(&bufsize,
+		"buf", 4096,
+		"default buffer size used by get/set.")
 
 	flag.BoolVar(&printVersion, "v", false,
 		"print the version and exit")
@@ -78,7 +83,7 @@ func main() {
 		cacheTTL = 0
 	}
 
-	allocator := cache.NewAllocatorPool()
+	allocator := cache.NewAllocatorPool(bufsize)
 
 	options := &cache.CacheOptions{
 		ShardNum:  int(cacheShards),

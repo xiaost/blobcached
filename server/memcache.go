@@ -29,13 +29,13 @@ type ServerMetrics struct {
 type MemcacheServer struct {
 	l         net.Listener
 	cache     Cache
-	allocator Allocator
+	allocator cache.Allocator
 	metrics   ServerMetrics
 
 	startTime time.Time
 }
 
-func NewMemcacheServer(l net.Listener, cache Cache, allocator Allocator) *MemcacheServer {
+func NewMemcacheServer(l net.Listener, cache Cache, allocator cache.Allocator) *MemcacheServer {
 	return &MemcacheServer{l: l, cache: cache, allocator: allocator}
 }
 
@@ -142,15 +142,16 @@ func (s *MemcacheServer) HandleSet(w io.Writer, r *bufio.Reader, cmdinfo *memcac
 		return cache.ErrValueSize
 	}
 
-	b := s.allocator.Malloc(int(cmdinfo.PayloadLen) + 2) // including \r\n
-	defer s.allocator.Free(b)
+	item := s.allocator.Alloc(int(cmdinfo.PayloadLen) + 2) // including \r\n
+	defer item.Free()
 
-	_, err := io.ReadFull(r, b)
+	_, err := io.ReadFull(r, item.Value)
 	if err != nil {
 		return err
 	}
-	value := b[:len(b)-2] // remove \r\n
-	item := cache.Item{Key: cmdinfo.Key, Value: value, Flags: cmdinfo.Flags}
+	item.Key = cmdinfo.Key
+	item.Value = item.Value[:len(item.Value)-2] // remove \r\n
+	item.Flags = cmdinfo.Flags
 
 	/* https://github.com/memcached/memcached/blob/master/doc/protocol.txt
 

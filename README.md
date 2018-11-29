@@ -16,7 +16,7 @@ Blobcached is a memcached protocol-compatible cache server for blob on SSD.
 | Name |  |
 | ------ | ------ |
 | indexfile | an indexfile contains many of `items` powered by [blotdb](https://github.com/boltdb/bolt) |
-| datafile | a regular file powered by [mmap](https://github.com/edsrzf/mmap-go) for storing values |
+| datafile | a regular file for storing values |
 | item | an item is made up of `key`, `offset`, `term`, `size` anchoring the value in datafile |
 | term | everytime the `datafile` is full, the `term` of `datafile` is increased  |
 

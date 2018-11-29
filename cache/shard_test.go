@@ -36,7 +36,7 @@ func TestShardSetGet(t *testing.T) {
 	if err != ErrNotFound {
 		t.Fatal("should not found")
 	}
-	if err := s.Set(Item{Key: "k1", Value: b}); err != nil {
+	if err := s.Set(&Item{Key: "k1", Value: b}); err != nil {
 		t.Fatal(err)
 	}
 	ci, err := s.Get("k1")
@@ -56,9 +56,9 @@ func TestShardSetGet(t *testing.T) {
 		goto EndOfTest
 	}
 
-	s.Set(Item{Key: "k2", Value: b})
-	s.Set(Item{Key: "k3", Value: b})
-	s.Set(Item{Key: "k4", Value: b})
+	s.Set(&Item{Key: "k2", Value: b})
+	s.Set(&Item{Key: "k3", Value: b})
+	s.Set(&Item{Key: "k4", Value: b})
 
 	st.LastKey = ""
 	s.scanKeysForGC(100, &st)

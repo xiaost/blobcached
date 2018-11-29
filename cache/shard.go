@@ -31,12 +31,13 @@ type ShardOptions struct {
 	Size      int64
 	TTL       int64
 	Allocator Allocator
+	DisableGC bool
 }
 
 var DefualtShardOptions = ShardOptions{
 	Size:      MinShardSize,
 	TTL:       0,
-	Allocator: NewAllocatorPool(),
+	Allocator: NewAllocatorPool(4096),
 }
 
 func LoadCacheShard(fn string, options *ShardOptions) (*Shard, error) {
@@ -48,7 +49,7 @@ func LoadCacheShard(fn string, options *ShardOptions) (*Shard, error) {
 		options.Size = MinShardSize
 	}
 	if options.Allocator == nil {
-		options.Allocator = NewAllocatorPool()
+		options.Allocator = NewAllocatorPool(4096)
 	}
 
 	var err error
@@ -74,7 +75,10 @@ func LoadCacheShard(fn string, options *ShardOptions) (*Shard, error) {
 	s.stats.LastUpdate = time.Now().Unix()
 
 	s.exit = make(chan struct{})
-	go s.GCLoop()
+
+	if !options.DisableGC {
+		go s.GCLoop()
+	}
 	return &s, nil
 }
 
@@ -113,7 +117,7 @@ func (s *Shard) GetStats() CacheStats {
 	return st
 }
 
-func (s *Shard) Set(ci Item) error {
+func (s *Shard) Set(ci *Item) error {
 	atomic.AddInt64(&s.metrics.SetTotal, 1)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -133,8 +137,7 @@ func (s *Shard) Set(ci Item) error {
 	return nil
 }
 
-func (s *Shard) Get(key string) (Item, error) {
-	var ci Item
+func (s *Shard) Get(key string) (*Item, error) {
 	atomic.AddInt64(&s.metrics.GetTotal, 1)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -143,7 +146,7 @@ func (s *Shard) Get(key string) (Item, error) {
 		if err == ErrNotFound {
 			atomic.AddInt64(&s.metrics.GetMisses, 1)
 		}
-		return ci, err
+		return nil, err
 	}
 
 	age := time.Now().Unix() - ii.Timestamp
@@ -152,17 +155,14 @@ func (s *Shard) Get(key string) (Item, error) {
 		atomic.AddInt64(&s.metrics.GetExpired, 1)
 		atomic.AddInt64(&s.metrics.Expired, 1)
 		s.index.Del(key)
-		return ci, ErrNotFound
+		return nil, ErrNotFound
 	}
 
+	ci := s.options.Allocator.Alloc(int(ii.ValueSize))
 	ci.Key = key
 	ci.Timestamp = ii.Timestamp
 	ci.TTL = ii.TTL
 	ci.Flags = ii.Flags
-
-	allocator := s.options.Allocator
-	ci.Value = allocator.Malloc(int(ii.ValueSize))
-	ci.allocator = allocator
 
 	err = s.data.Read(ii.Offset, ci.Value)
 	if err == ErrOutOfRange {
@@ -173,11 +173,11 @@ func (s *Shard) Get(key string) (Item, error) {
 			atomic.AddInt64(&s.metrics.GetMisses, 1)
 		}
 		ci.Free()
-		return ci, err
+		return nil, err
 	}
 	if ii.Crc32 != 0 && ii.Crc32 != crc32.ChecksumIEEE(ci.Value) {
 		ci.Free()
-		return ci, ErrValueCrc
+		return nil, ErrValueCrc
 	}
 	atomic.AddInt64(&s.metrics.GetHits, 1)
 	return ci, nil

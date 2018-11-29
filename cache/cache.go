@@ -69,9 +69,27 @@ type Cache struct {
 	options CacheOptions
 }
 
+type Item struct {
+	Key       string
+	Value     []byte
+	Timestamp int64
+	TTL       uint32
+	Flags     uint32
+
+	free func(*Item)
+}
+
+func (i *Item) Free() {
+	if i.free == nil {
+		panic("double free or not alloc from allocator")
+	}
+	i.free(i)
+	i.free = nil
+}
+
 type Allocator interface {
-	Malloc(n int) []byte
-	Free([]byte)
+	Alloc(n int) *Item
+	Free(*Item)
 }
 
 type CacheOptions struct {
@@ -79,13 +97,15 @@ type CacheOptions struct {
 	Size      int64
 	TTL       int64
 	Allocator Allocator
+
+	DisableGC bool
 }
 
 var DefualtCacheOptions = CacheOptions{
 	ShardNum:  7,
 	Size:      32 * MaxValueSize, // 32*128MB = 4GB
 	TTL:       0,
-	Allocator: NewAllocatorPool(),
+	Allocator: NewAllocatorPool(4096),
 }
 
 func NewCache(path string, options *CacheOptions) (*Cache, error) {
@@ -95,7 +115,7 @@ func NewCache(path string, options *CacheOptions) (*Cache, error) {
 		*options = DefualtCacheOptions
 	}
 	if options.Allocator == nil {
-		options.Allocator = NewAllocatorPool()
+		options.Allocator = NewAllocatorPool(4096)
 	}
 	if options.ShardNum > MaxShards {
 		options.ShardNum = MaxShards
@@ -103,6 +123,10 @@ func NewCache(path string, options *CacheOptions) (*Cache, error) {
 	if options.Size/int64(options.ShardNum) < MinShardSize {
 		options.ShardNum = int(options.Size / MinShardSize)
 	}
+	if options.ShardNum <= 0 {
+		options.ShardNum = 1
+	}
+
 	var err error
 	cache := Cache{options: *options}
 	cache.shards = make([]*Shard, options.ShardNum)
@@ -117,6 +141,7 @@ func NewCache(path string, options *CacheOptions) (*Cache, error) {
 			Size:      options.Size / int64(options.ShardNum),
 			TTL:       options.TTL,
 			Allocator: options.Allocator,
+			DisableGC: options.DisableGC,
 		}
 		cache.shards[i], err = LoadCacheShard(fn, sopts)
 		if err != nil {
@@ -142,25 +167,7 @@ func (c *Cache) getshard(key string) *Shard {
 	return c.shards[c.hash.Get(key)]
 }
 
-type Item struct {
-	Key       string
-	Value     []byte
-	Timestamp int64
-	TTL       uint32
-	Flags     uint32
-
-	allocator Allocator
-}
-
-func (i *Item) Free() {
-	if i.Value != nil && i.allocator != nil {
-		i.allocator.Free(i.Value)
-		i.allocator = nil
-		i.Value = nil
-	}
-}
-
-func (c *Cache) Set(item Item) error {
+func (c *Cache) Set(item *Item) error {
 	if int64(len(item.Value)) > MaxValueSize {
 		return ErrValueSize
 	}
@@ -168,7 +175,7 @@ func (c *Cache) Set(item Item) error {
 	return s.Set(item)
 }
 
-func (c *Cache) Get(key string) (Item, error) {
+func (c *Cache) Get(key string) (*Item, error) {
 	s := c.getshard(key)
 	return s.Get(key)
 }

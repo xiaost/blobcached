@@ -3,32 +3,38 @@ package cache
 import "testing"
 
 func TestAllocatorPool(t *testing.T) {
-	allocator := NewAllocatorPool()
-	b := allocator.Malloc(4000)
-	if len(b) != 4000 || cap(b) != 4096 {
-		t.Fatalf("malloc err: len:%d cap:%d", len(b), cap(b))
+	a := NewAllocatorPool(10).(*AllocatorPool)
+	n := a.Alloc(1)
+	n.Free()
+	if a.metrics.Malloc != 1 {
+		t.Fatal(a.metrics.Malloc)
 	}
-	allocator.Free(b)
-	b = allocator.Malloc(100 << 10)
-	if len(b) != 100<<10 || cap(b) != 128<<10 {
-		t.Fatalf("malloc err: len:%d cap:%d", len(b), cap(b))
+	if a.metrics.New != 1 {
+		t.Fatal(a.metrics.New)
 	}
-	allocator.Free(b)
-
-	for i := 0; i < 1000; i++ {
-		b := allocator.Malloc(8 << 10)
-		allocator.Free(b)
+	if a.metrics.Free != 1 {
+		t.Fatal(a.metrics.Malloc)
 	}
-
-	metrics := allocator.(*AllocatorPool).GetMetrics()
-	if metrics.Malloc != 1002 || metrics.Free != 1002 || metrics.New != 3 {
-		t.Fatalf("metrics err %+v", metrics)
+	n = a.Alloc(1)
+	n.Free()
+	if a.metrics.Malloc != 2 {
+		t.Fatal(a.metrics.Malloc)
 	}
-
-	allocator.Malloc(int(MaxValueSize + 1))
-	allocator.Free(make([]byte, 1))
-	metrics = allocator.(*AllocatorPool).GetMetrics()
-	if metrics.ErrMalloc != 1 || metrics.ErrFree != 1 {
-		t.Fatal("metrics err", metrics)
+	if a.metrics.New != 1 {
+		t.Fatal(a.metrics.New)
+	}
+	if a.metrics.Free != 2 {
+		t.Fatal(a.metrics.Malloc)
+	}
+	n = a.Alloc(11)
+	n.Free()
+	if a.metrics.Malloc != 3 {
+		t.Fatal(a.metrics.Malloc)
+	}
+	if a.metrics.New != 2 {
+		t.Fatal(a.metrics.New)
+	}
+	if a.metrics.Free != 3 {
+		t.Fatal(a.metrics.Malloc)
 	}
 }

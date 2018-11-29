@@ -60,9 +60,6 @@ func TestCacheDataReadErr(t *testing.T) {
 	if err := c.Read(1023, bb); err != ErrOutOfRange {
 		t.Fatal("should out of range")
 	}
-	if err := c.Read(1000, bb); err != ErrHeader {
-		t.Fatal("should err header")
-	}
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +77,7 @@ func TestCacheDataWriteErr(t *testing.T) {
 	}
 	b := make([]byte, 8)
 	rand.Read(b)
-	if err := c.Write(1001, b); err != ErrOutOfRange {
+	if err := c.Write(1017, b); err != ErrOutOfRange {
 		t.Fatal("should out of range")
 	}
 	if err := c.Close(); err != nil {
